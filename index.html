@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Ruleta Automotriz</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@600&display=swap" rel="stylesheet">
+
+<style>
+
+body{
+    margin:0;
+    font-family:'Bebas Neue', sans-serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    min-height:100vh;
+    text-align:center;
+
+    /* 🔥 CAMBIA ESTA IMAGEN */
+    background:url("fondo.png") no-repeat center center;
+    background-size:cover;
+
+}
+
+
+/* LOGOS */
+
+.logo-top{
+    width:250px;
+    margin-top:20px;
+}
+
+.logo-bottom{
+    width:200px;
+    margin:25px 0;
+}
+
+/* RUEDA */
+
+.wheel-wrapper{
+    width:100%;
+    display:flex;
+    justify-content:center;
+    margin-top:10px;
+}
+
+.wheel-container{
+    position:relative;
+    width:70vw;
+    max-width:600px;
+    max-height:70vh;
+    aspect-ratio:1/1;
+
+    border-radius:50%;
+    padding:18px;
+
+    background:linear-gradient(
+        145deg,
+        #ffffff 0%,
+        #c0c0c0 30%,
+        #6f6f6f 60%,
+        #ffffff 100%
+    );
+
+    box-shadow:
+    0 12px 30px rgba(0,0,0,0.35);
+}
+
+canvas{
+    width:100%;
+    height:100%;
+    display:block;
+    border-radius:50%;
+     filter: drop-shadow(0 10px 15px rgba(0,0,0,0.3));
+}
+
+/* FLECHA */
+
+.pointer{
+    position:absolute;
+    top:-18px;
+    left:50%;
+    transform:translateX(-50%);
+    width:0;
+    height:0;
+    border-left:20px solid transparent;
+    border-right:20px solid transparent;
+    border-top:35px solid #E60012;
+    z-index:5;
+}
+
+/* LUCES */
+
+.lights{
+    position:absolute;
+    inset:0;
+    border-radius:50%;
+    pointer-events:none;
+}
+
+.light{
+    position:absolute;
+    width:2%;
+    aspect-ratio:1/1;
+    background:#FFD700;
+    border-radius:50%;
+    box-shadow:0 0 10px #FFD700, 0 0 20px #FF0000;
+    animation:blink 1s infinite alternate;
+}
+
+@keyframes blink{
+    from{opacity:0.4;}
+    to{opacity:1;}
+}
+
+/* BOTÓN MEJORADO */
+
+button{
+    font-family:'Oswald', sans-serif;
+    margin-top:30px;
+    padding:14px 45px;
+    font-size:26px;
+    border:none;
+    border-radius:10px;
+
+    background:#E60012;
+    color:white;
+
+    cursor:pointer;
+
+    box-shadow:0 6px 15px rgba(0,0,0,0.25);
+
+    transition:all .25s ease;
+}
+
+/* EFECTO HOVER */
+
+button:hover{
+    background:#c4000f;
+    transform:translateY(-3px);
+    box-shadow:0 10px 25px rgba(0,0,0,0.35);
+}
+
+button:active{
+    transform:translateY(1px);
+}
+
+/* POPUP ELEGANTE */
+
+.popup-box{
+    background:white;
+    padding:45px;
+    border-radius:15px;
+    text-align:center;
+
+    box-shadow:
+    0 15px 40px rgba(0,0,0,0.4);
+
+    animation:popupScale .3s ease;
+}
+
+@keyframes popupScale{
+    from{
+        transform:scale(.7);
+        opacity:0;
+    }
+    to{
+        transform:scale(1);
+        opacity:1;
+    }
+}
+
+.popup-title{
+    font-size:42px;
+    margin:0;
+    color:#222323;
+}
+
+.popup-btn{
+    margin-top:25px;
+    padding:10px 35px;
+    font-size:22px;
+}
+
+</style>
+</head>
+<body>
+
+<!-- 🔥 LOGO SUPERIOR -->
+<img src="logo-superior.png" class="logo-top">
+
+<h1 style="color:#222323;">🔥GIRA Y GANA CON ISUZU 🎯
+</h1>
+
+
+<div class="wheel-wrapper">
+    <div class="wheel-container">
+        <div class="pointer"></div>
+        <canvas id="wheel"></canvas>
+        <div class="lights"></div>
+    </div>
+</div>
+
+<button onclick="spin()">GIRAR</button>
+
+<!-- 🔥 LOGO INFERIOR -->
+<img src="logo-inferior.png" class="logo-bottom">
+
+<script>
+
+const prizes = [
+"INTENTA DE NUEVO",
+"TERMÓMETRO DIGITAL",
+"INTENTA DE NUEVO",
+"LANYARD",
+"INTENTA DE NUEVO",
+"GORRA",
+"INTENTA DE NUEVO",
+"POLO"
+];
+
+const canvas = document.getElementById("wheel");
+const container = document.querySelector(".wheel-container");
+const ctx = canvas.getContext("2d");
+
+let angle = 0;
+let spinning = false;
+
+/* 🔊 SONIDOS */
+const spinSound = new Audio("ruleta.mp3");       // sonido giro
+const winSound = new Audio("ganador.mp3");       // sonido premio
+const loseSound = new Audio("intenta.mp3");
+
+function resizeCanvas(){
+    canvas.width = container.offsetWidth;
+    canvas.height = container.offsetHeight;
+}
+
+function drawWheel(){
+
+    const size = canvas.width;
+    const center = size/2;
+    const radius = center - 15;
+    const sliceAngle = (2*Math.PI)/prizes.length;
+
+    ctx.clearRect(0,0,size,size);
+
+    for(let i=0;i<prizes.length;i++){
+
+        ctx.beginPath();
+        ctx.moveTo(center,center);
+        ctx.arc(center,center,radius,
+            angle + i*sliceAngle,
+            angle + (i+1)*sliceAngle);
+        ctx.closePath();
+
+        ctx.fillStyle = i%2==0 ? "#1F1F1F" : "#C6161A";
+        ctx.fill();
+
+        ctx.save();
+        ctx.translate(center,center);
+        ctx.rotate(angle + i*sliceAngle + sliceAngle/2);
+        ctx.textAlign="right";
+        ctx.fillStyle="white";
+        ctx.font = (size*0.05)+"px Bebas Neue";
+        ctx.fillText(prizes[i], radius-20, 5);
+        ctx.restore();
+    }
+
+    ctx.beginPath();
+    ctx.arc(center,center,radius,0,2*Math.PI);
+    ctx.lineWidth=8;
+    ctx.strokeStyle="#1F1F1F";
+    ctx.stroke();
+}
+
+function spin(){
+
+    if(spinning) return;
+    spinning = true;
+
+    spinSound.currentTime = 0;
+    spinSound.play();
+
+    const spinDuration = 4000;
+    const startAngle = angle;
+    const extraSpins = 5 * 2*Math.PI;
+    const randomAngle = Math.random() * 2*Math.PI;
+    const finalAngle = startAngle + extraSpins + randomAngle;
+
+    let start = null;
+
+    function animate(timestamp){
+        if(!start) start = timestamp;
+        let progress = timestamp - start;
+        let ease = 1 - Math.pow(1 - progress/spinDuration, 3);
+
+        angle = startAngle + ease*(finalAngle - startAngle);
+        drawWheel();
+
+        if(progress < spinDuration){
+            requestAnimationFrame(animate);
+        } else {
+            angle = finalAngle % (2*Math.PI);
+            drawWheel();
+            spinning = false;
+            spinSound.pause();
+            showResult();
+        }
+    }
+
+    requestAnimationFrame(animate);
+}
+
+function showResult(){
+
+    const sliceAngle = (2*Math.PI)/prizes.length;
+
+    // Ajuste porque la flecha está arriba (90°)
+    const adjustedAngle = (angle + Math.PI/2) % (2*Math.PI);
+
+    const index = prizes.length - Math.floor(adjustedAngle / sliceAngle) - 1;
+
+    const finalIndex = (index + prizes.length) % prizes.length;
+
+    const prize = prizes[finalIndex];
+
+    if(prize === "INTENTA DE NUEVO"){
+    loseSound.play();
+    }else{
+    winSound.play();
+}
+
+    showPopup(prize);
+}
+
+/* 🎉 POPUP */
+
+function showPopup(prize){
+
+    const popup = document.createElement("div");
+    popup.style.position="fixed";
+    popup.style.inset="0";
+    popup.style.background="rgba(0,0,0,0.75)";
+    popup.style.display="flex";
+    popup.style.justifyContent="center";
+    popup.style.alignItems="center";
+    popup.style.zIndex="999";
+
+    popup.innerHTML = `
+        <div class="popup-box">
+            <h2 class="popup-title">${prize}</h2>
+            <button class="popup-btn"
+            onclick="this.parentElement.parentElement.remove()">
+            CERRAR
+            </button>
+        </div>
+    `;
+
+    document.body.appendChild(popup);
+}
+/* 🔆 LUCES */
+
+function createLights(){
+
+    const lightsContainer = document.querySelector(".lights");
+    lightsContainer.innerHTML="";
+
+    const size = container.offsetWidth;
+    const center = size/2;
+    const radius = center - (size*0.02);
+    const total = 36;
+
+    for(let i=0;i<total;i++){
+
+        const angle = (i/total)*(2*Math.PI);
+        const x = center + radius*Math.cos(angle);
+        const y = center + radius*Math.sin(angle);
+
+        const light = document.createElement("div");
+        light.classList.add("light");
+
+        light.style.left = (x/size*100)+"%";
+        light.style.top = (y/size*100)+"%";
+        light.style.transform="translate(-50%,-50%)";
+        light.style.animationDelay=(i*0.05)+"s";
+
+        lightsContainer.appendChild(light);
+    }
+}
+
+window.addEventListener("resize", ()=>{
+    resizeCanvas();
+    drawWheel();
+    createLights();
+});
+
+window.addEventListener("load", ()=>{
+    resizeCanvas();
+    drawWheel();
+    createLights();
+});
+
+</script>
+</body>
+</html>
